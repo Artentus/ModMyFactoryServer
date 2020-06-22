@@ -1,0 +1,68 @@
+﻿@*
+    Copyright (C) 2020 Mathis Rech
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+*@
+
+@using MatBlazor
+
+@namespace ModMyFactoryServer.Shared
+@inherits LayoutComponentBase
+
+<MatAppBarContainer Style="width: 100vw; height: 100vh;">
+
+    <MatAppBar Fixed="true">
+        <MatAppBarRow>
+            <MatAppBarSection>
+                <MatIconButton OnClick="@((e) => ToggleNavMenu())" Icon="menu" />
+                <MatAppBarTitle>ModMyFactory Server Manager</MatAppBarTitle>
+            </MatAppBarSection>
+            <MatAppBarSection Align="@MatAppBarSectionAlign.End">
+                <AuthorizeView>
+                    <Authorized Context="AuthState">
+                        <MatTooltip Tooltip="@AuthState.User.Identity.Name">
+                            <MatIcon RefBack="@context" Icon="account_circle" Style="margin-right: -0.2em" />
+                        </MatTooltip>
+                    </Authorized>
+                </AuthorizeView>
+                <form method="post" action="logout">
+                    <MatButton Type="submit" class="text-white nav-link">Log out</MatButton>
+                </form>
+                <MatButton class="text-white nav-link" OnClick="@((e) => AboutDialogIsOpen = true)">About</MatButton>
+            </MatAppBarSection>
+        </MatAppBarRow>
+    </MatAppBar>
+
+    <MatAppBarContent Style="width: 100%; height: 100%;">
+
+        <MatDrawerContainer Style="width: 100%; height: 100%;">
+            <MatDrawer @bind-Opened="@NavMenuOpened">
+                <NavMenu />
+            </MatDrawer>
+
+            <MatDrawerContent>
+                <div style="padding: 1em; margin: 1em;">
+                    @Body
+                </div>
+            </MatDrawerContent>
+        </MatDrawerContainer>
+
+        <MatDialog @bind-IsOpen="@AboutDialogIsOpen">
+            <AboutDialog />
+        </MatDialog>
+
+    </MatAppBarContent>
+
+</MatAppBarContainer>
+
+@code
+{
+    bool NavMenuOpened { get; set; } = true;
+
+    bool AboutDialogIsOpen { get; set; } = false;
+
+    void ToggleNavMenu() => NavMenuOpened = !NavMenuOpened;
+}

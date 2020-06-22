@@ -1,0 +1,68 @@
+﻿@*
+    Copyright (C) 2020 Mathis Rech
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+*@
+
+@page "/"
+
+@using Microsoft.AspNetCore.Identity
+
+@namespace ModMyFactoryServer.Pages
+
+@inject RoleManager<IdentityRole> RoleManager
+@inject UserManager<IdentityUser> UserManager
+
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ModMyFactory Server Manager</title>
+    <base href="~/" />
+    <link href="css/site.css" rel="stylesheet" />
+    <script src="_content/MatBlazor/dist/matBlazor.js"></script>
+    <link href="_content/MatBlazor/dist/matBlazor.css" rel="stylesheet" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+</head>
+<body>
+    <app>
+        <component type="typeof(App)" render-mode="ServerPrerendered" />
+    </app>
+
+    <script src="_framework/blazor.server.js"></script>
+</body>
+</html>
+
+@functions
+{
+    public async Task OnGetAsync()
+    {
+        // Make sure hardcoded roles are present in the database
+        foreach (var role in Roles.Enumerate())
+        {
+            if (!await RoleManager.RoleExistsAsync(role))
+                await RoleManager.CreateAsync(new IdentityRole(role));
+        }
+
+        // Make sure the default admin account is present in the database
+        // We are adding a default password here so server admins can access the control panel
+        // However this is of course insecure and they have to change the password after first logging in
+        var defaultAdmin = await UserManager.FindByNameAsync("Admin");
+        if (defaultAdmin is null)
+        {
+            defaultAdmin = new IdentityUser("Admin");
+            _ = await UserManager.CreateAsync(defaultAdmin, "ModMyFactory");
+            _ = await UserManager.SetLockoutEnabledAsync(defaultAdmin, false);
+            _ = await UserManager.AddToRoleAsync(defaultAdmin, Roles.Admin);
+        }
+    }
+}

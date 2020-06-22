@@ -1,0 +1,38 @@
+﻿@*
+    Copyright (C) 2020 Mathis Rech
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+*@
+
+@page "/"
+@namespace ModMyFactoryServer.Pages
+@layout ReducedLayout
+
+@inject NavigationManager NavigationManager
+
+@code
+{
+    [CascadingParameter]
+    Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        if (!(AuthenticationStateTask is null))
+        {
+            var authState = await AuthenticationStateTask;
+            var user = authState.User;
+            if (user.Identity.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/controlpanel");
+                return;
+            }
+        }
+
+        NavigationManager.NavigateTo("/login");
+    }
+}

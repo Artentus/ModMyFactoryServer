@@ -1,0 +1,52 @@
+﻿@*
+    Copyright (C) 2020 Mathis Rech
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+*@
+
+@page "/signin"
+
+@using System.Net
+@using Microsoft.AspNetCore.Identity
+
+@attribute [IgnoreAntiforgeryToken]
+@inject UserManager<IdentityUser> UserManager
+@inject SignInManager<IdentityUser> SignInManager
+
+@functions
+{
+    public async Task<IActionResult> OnPostAsync()
+    {
+        var query = Request.Form;
+        if (query.TryGetValue("username", out var usernameList) && query.TryGetValue("password", out var passwordList))
+        {
+            if ((usernameList.Count != 1) || (passwordList.Count != 1))
+                return StatusCode((int)HttpStatusCode.BadRequest);
+
+            string username = usernameList[0];
+            string password = passwordList[0];
+            bool isPersistent = false;
+
+            if (query.TryGetValue("persistent", out var persistentList) && (persistentList.Count == 1))
+            {
+                if (!bool.TryParse(persistentList[0], out isPersistent))
+                    isPersistent = false;
+            }
+
+            var result = await SignInManager.PasswordSignInAsync(username, password, isPersistent, false);
+            if (result.Succeeded) return Redirect("/controlpanel");
+
+            return Redirect("/login/failed");
+        }
+
+        return StatusCode((int)HttpStatusCode.BadRequest);
+    }
+
+    public IActionResult OnGet()
+    {
+        return StatusCode((int)HttpStatusCode.MethodNotAllowed);
+    }
+}

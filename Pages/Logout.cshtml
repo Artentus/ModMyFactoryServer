@@ -1,0 +1,36 @@
+﻿@*
+    Copyright (C) 2020 Mathis Rech
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+*@
+
+@page "/logout"
+
+@using System.Net
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+
+@attribute [IgnoreAntiforgeryToken]
+@inject SignInManager<IdentityUser> SignInManager
+
+@functions
+{
+    public async Task<IActionResult> OnPostAsync()
+    {
+        if (SignInManager.IsSignedIn(User))
+            await SignInManager.SignOutAsync();
+
+        // Clear the existing external cookie to ensure a clean login process
+        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+
+        return Redirect("/");
+    }
+
+    public IActionResult OnGet()
+    {
+        return StatusCode((int)HttpStatusCode.MethodNotAllowed);
+    }
+}

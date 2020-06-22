@@ -1,0 +1,94 @@
+﻿@*
+    Copyright (C) 2020 Mathis Rech
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+*@
+
+@page "/login"
+@page "/login/failed"
+
+@using Microsoft.AspNetCore.Identity
+@using System.ComponentModel.DataAnnotations
+
+@namespace ModMyFactoryServer.Pages
+@layout ReducedLayout
+
+@inject NavigationManager NavigationManager
+@inject SignInManager<IdentityUser> SignInManager
+
+<div class="login-form mat-elevation-z5">
+    <div class="center">
+        <img src="favicon.ico" />
+    </div>
+
+    <EditForm Model="@LoginData">
+        <DataAnnotationsValidator />
+
+        <div style="padding-top: 1em">
+            <MatTextField TValue="string" Label="Username" @bind-Value="@LoginData.Username" FullWidth="true" />
+            <ValidationMessage For="@(() => LoginData.Username)" />
+        </div>
+        <div>
+            <MatTextField TValue="string" Label="Password" @bind-Value="@LoginData.Password" FullWidth="true" Type="password" />
+            <ValidationMessage For="@(() => LoginData.Password)" />
+        </div>
+        <div>
+            <MatCheckbox TValue="bool" @bind-Value="@LoginData.IsPersistent">
+                <div style="margin-top: 0.7em;">Remember me</div>
+            </MatCheckbox>
+        </div>
+    </EditForm>
+
+    <form method="post" action="signin">
+        <input type="hidden" name="username" @bind-value="@LoginData.Username" />
+        <input type="hidden" name="password" @bind-value="@LoginData.Password" />
+        <input type="hidden" name="persistent" @bind-value="@LoginData.IsPersistentString" />
+
+        <div class="center" style="padding-top: 1em">
+            <MatButton Type="submit">Log in</MatButton>
+        </div>
+    </form>
+
+    @if (LoginInvalid)
+    {
+        <div class="center validation-message" style="padding-top: 1em">
+            Invalid username or password
+        </div>
+    }
+</div>
+
+@code
+{
+    class LoginModel
+    {
+        [Required]
+        public string? Username { get; set; }
+
+        [Required]
+        public string? Password { get; set; }
+
+        public bool IsPersistent { get; set; }
+
+        public string IsPersistentString
+        {
+            get => IsPersistent.ToString().ToLowerInvariant();
+            set => IsPersistent = bool.Parse(value);
+        }
+    }
+
+    readonly LoginModel LoginData = new LoginModel();
+
+    bool LoginInvalid { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        var uri = new Uri(NavigationManager.Uri, UriKind.Absolute);
+        LoginInvalid = uri.AbsolutePath.EndsWith("failed");
+        StateHasChanged();
+    }
+}

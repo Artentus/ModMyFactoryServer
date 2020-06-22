@@ -1,0 +1,467 @@
+﻿@*
+    Copyright (C) 2020 Mathis Rech
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+*@
+
+@page "/accounts"
+
+@using Microsoft.AspNetCore.Identity
+@using System.ComponentModel.DataAnnotations
+
+@namespace ModMyFactoryServer.Pages
+@inherits AuthorizedPageBase
+
+@inject SignInManager<IdentityUser> SignInManager
+
+<p style="display: grid; grid-template-columns: auto max-content max-content auto; grid-column-gap: 4em;">
+    <AuthorizeView Context="AuthState">
+        <Authorized>
+            <div style="grid-column: 2">
+                <MatHeadline4>Change Password</MatHeadline4>
+                <EditForm Model="@PasswordChangeData" OnValidSubmit="@ChangePasswordAsync">
+                    <DataAnnotationsValidator />
+
+                    <div>
+                        <MatTextField TValue="string" @bind-Value="@PasswordChangeData.CurrentPassword" Style="width: 20em" Label="Current password" Type="password" />
+                        <ValidationMessage For="@(() => PasswordChangeData.CurrentPassword)" />
+                    </div>
+                    <div>
+                        <MatTextField TValue="string" @bind-Value="@PasswordChangeData.NewPassword" Style="width: 20em" Label="New password" Type="password" />
+                        <ValidationMessage For="@(() => PasswordChangeData.NewPassword)" />
+                    </div>
+                    <div>
+                        <MatTextField TValue="string" @bind-Value="@PasswordChangeData.NewPasswordRepeat" Style="width: 20em" Label="Repeat new password" Type="password" />
+                        <ValidationMessage For="@(() => PasswordChangeData.NewPasswordRepeat)" />
+                    </div>
+
+                    @if (PasswordChangeGenericError)
+                    {
+                        <div class="validation-message" style="padding-top: 1em">
+                            Unable to change password: unknown error
+                        </div>
+                    }
+
+                    @if (PasswordChangePasswordInvalid)
+                    {
+                        <div class="validation-message" style="padding-top: 1em">
+                            Invalid password
+                        </div>
+                    }
+
+                    @if (PasswordChangePasswordMismatch)
+                    {
+                        <div class="validation-message" style="padding-top: 1em">
+                            Passwords don't match
+                        </div>
+                    }
+
+                    @if (PasswordChangePasswordPolicyViolation)
+                    {
+                        <div class="validation-message" style="padding-top: 1em">
+                            Password requirements not met
+                        </div>
+                    }
+
+                    <div style="margin-top: 0.5em">
+                        <MatButton Type="submit" Raised="true">Change</MatButton>
+                    </div>
+                </EditForm>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="@Roles.Admin" Context="AuthState">
+        <Authorized>
+            <div style="grid-column: 3">
+                <MatHeadline4>Create New User Account</MatHeadline4>
+                <EditForm Model="@UserCreationData" OnValidSubmit="@CreateUserAsync">
+                    <DataAnnotationsValidator />
+
+                    <div>
+                        <MatTextField TValue="string" @bind-Value="@UserCreationData.Username" Style="width: 20em" Label="Username" />
+                        <ValidationMessage For="@(() => UserCreationData.Username)" />
+                    </div>
+                    <div>
+                        <MatTextField TValue="string" @bind-Value="@UserCreationData.Password" Style="width: 20em" Label="Password" Type="password" />
+                        <ValidationMessage For="@(() => UserCreationData.Password)" />
+                    </div>
+                    <div>
+                        <MatTextField TValue="string" @bind-Value="@UserCreationData.PasswordRepeat" Style="width: 20em" Label="Repeat password" Type="password" />
+                        <ValidationMessage For="@(() => UserCreationData.PasswordRepeat)" />
+                    </div>
+                    <div>
+                        <MatCheckbox TValue="bool" @bind-Value="@UserCreationData.IsAdmin">
+                            <div style="margin-top: 0.7em;">Admin</div>
+                        </MatCheckbox>
+                    </div>
+
+                    @if (UserCreationGenericError)
+                    {
+                        <div class="validation-message" style="padding-top: 1em">
+                            Unable to create user account: unknown error
+                        </div>
+                    }
+
+                    @if (UserCreationUserExists)
+                    {
+                        <div class="validation-message" style="padding-top: 1em">
+                            A user with this name already exists
+                        </div>
+                    }
+
+                    @if (UserCreationPasswordMismatch)
+                    {
+                        <div class="validation-message" style="padding-top: 1em">
+                            Passwords don't match
+                        </div>
+                    }
+
+                    @if (UserCreationPasswordPolicyViolation)
+                    {
+                        <div class="validation-message" style="padding-top: 1em">
+                            Password requirements not met
+                        </div>
+                    }
+
+                    <div style="margin-top: 0.5em">
+                        <MatButton Type="submit" Raised="true">Add user account</MatButton>
+                    </div>
+                </EditForm>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</p>
+
+<AuthorizeView Roles="@Roles.Admin" Context="AuthState">
+    <Authorized>
+        <p style="display: grid; grid-template-columns: auto max-content auto; grid-column-gap: 4em;">
+            <div style="grid-column: 2">
+                <MatHeadline4>Edit User Accounts</MatHeadline4>
+                <MatList SingleSelection="true" TwoLine="true">
+                    @foreach (var user in UserManager.Users)
+                    {
+                        var roles = UserManager.GetRolesAsync(user).Result; // Ugly but saves a whole lot of code
+                        var username = user.UserName;
+                        if (user.Id == User?.Id) username += " (Current User)";
+
+                        <MatListItem Class="mat-elevation-z3" Style="border-radius: 0.3em; margin-bottom: 0.4em; min-width: 20em; max-width: 50vw; width: 50em;">
+                            <MatListItemText>
+                                <MatListItemPrimaryText>@username</MatListItemPrimaryText>
+                                <MatListItemSecondaryText>@string.Join(", ", roles)</MatListItemSecondaryText>
+                            </MatListItemText>
+
+                            @if (user.Id != User?.Id) // Current user cannot be edited here
+                            {
+                                <div style="margin-left: auto; margin-right: 0;">
+                                    <MatTooltip Tooltip="Set password">
+                                        <MatIconButton Icon="vpn_key" RefBack="@context" OnClick="@(() => OpenChangePasswordDialog(user))" />
+                                    </MatTooltip>
+
+                                    @if (user.UserName != "Admin") // We don't want the default admin account to be deleted
+                                    {
+                                        <MatTooltip Tooltip="Delete user">
+                                            <MatIconButton Icon="delete" RefBack="@context" OnClick="@(async () => await DeleteUserAsync(user))" />
+                                        </MatTooltip>
+                                    }
+                                </div>
+                            }
+                        </MatListItem>
+                    }
+                </MatList>
+            </div>
+        </p>
+
+        <MatDialog @bind-IsOpen="@IsPasswordChangeDialogOpen">
+            <MatDialogTitle>
+                Set New Password
+            </MatDialogTitle>
+            <MatDialogContent>
+                <EditForm Model="@AdminPasswordChangeData" OnValidSubmit="@AdminChangePasswordAsync">
+                    <DataAnnotationsValidator />
+
+                    <div>
+                        <MatTextField TValue="string" @bind-Value="@AdminPasswordChangeData.NewPassword" Style="width: 20em" Label="Password" Type="password" />
+                        <ValidationMessage For="@(() => AdminPasswordChangeData.NewPassword)" />
+                    </div>
+                    <div>
+                        <MatTextField TValue="string" @bind-Value="@AdminPasswordChangeData.NewPasswordRepeat" Style="width: 20em" Label="Repeat password" Type="password" />
+                        <ValidationMessage For="@(() => AdminPasswordChangeData.NewPasswordRepeat)" />
+                    </div>
+
+                    @if (AdminPasswordChangeGenericError)
+                    {
+                        <div class="validation-message" style="padding-top: 1em">
+                            Unable to change password: unknown error
+                        </div>
+                    }
+
+                    @if (AdminPasswordChangePasswordMismatch)
+                    {
+                        <div class="validation-message" style="padding-top: 1em">
+                            Passwords don't match
+                        </div>
+                    }
+
+                    @if (AdminPasswordChangePasswordPolicyViolation)
+                    {
+                        <div class="validation-message" style="padding-top: 1em">
+                            Password requirements not met
+                        </div>
+                    }
+
+                    <div class="center" style="margin-top: 0.5em">
+                        <MatButton Type="submit">Set</MatButton>
+                    </div>
+                </EditForm>
+            </MatDialogContent>
+        </MatDialog>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    class PasswordChangeModel
+    {
+        [Required]
+        public string? CurrentPassword { get; set; }
+
+        [Required]
+        public string? NewPassword { get; set; }
+
+        [Required]
+        public string? NewPasswordRepeat { get; set; }
+    }
+
+    readonly PasswordChangeModel PasswordChangeData = new PasswordChangeModel();
+
+    bool PasswordChangeGenericError { get; set; }
+
+    bool PasswordChangePasswordInvalid { get; set; }
+
+    bool PasswordChangePasswordMismatch { get; set; }
+
+    bool PasswordChangePasswordPolicyViolation { get; set; }
+
+    async Task ChangePasswordAsync()
+    {
+        PasswordChangeGenericError = false;
+        PasswordChangePasswordInvalid = false;
+        PasswordChangePasswordMismatch = false;
+        PasswordChangePasswordPolicyViolation = false;
+        StateHasChanged();
+
+        if (!(User is null))
+        {
+            if (string.Equals(PasswordChangeData.NewPassword, PasswordChangeData.NewPasswordRepeat, StringComparison.InvariantCulture))
+            {
+                var result = await UserManager.ChangePasswordAsync(User, PasswordChangeData.CurrentPassword, PasswordChangeData.NewPassword);
+                if (result.Succeeded)
+                {
+                    // Clear the form
+                    PasswordChangeData.CurrentPassword = null;
+                    PasswordChangeData.NewPassword = null;
+                    PasswordChangeData.NewPasswordRepeat = null;
+                }
+                else if (result.IsPasswordInvalid())
+                {
+                    PasswordChangePasswordInvalid = true;
+                }
+                else if (result.IsPasswordPolicyViolation())
+                {
+                    PasswordChangePasswordPolicyViolation = true;
+                }
+                else
+                {
+                    PasswordChangeGenericError = true;
+                }
+            }
+            else
+            {
+                PasswordChangePasswordMismatch = true;
+            }
+
+            StateHasChanged();
+        }
+    }
+
+
+    class UserCreationModel
+    {
+        [Required]
+        public string? Username { get; set; }
+
+        [Required]
+        public string? Password { get; set; }
+
+        [Required]
+        public string? PasswordRepeat { get; set; }
+
+        public bool IsAdmin { get; set; }
+    }
+
+    readonly UserCreationModel UserCreationData = new UserCreationModel();
+
+    bool UserCreationGenericError { get; set; }
+
+    bool UserCreationUserExists { get; set; }
+
+    bool UserCreationPasswordMismatch { get; set; }
+
+    bool UserCreationPasswordPolicyViolation { get; set; }
+
+    async Task CreateUserAsync()
+    {
+        UserCreationGenericError = false;
+        UserCreationUserExists = false;
+        UserCreationPasswordMismatch = false;
+        UserCreationPasswordPolicyViolation = false;
+        StateHasChanged();
+
+        if (string.Equals(UserCreationData.Password, UserCreationData.PasswordRepeat, StringComparison.InvariantCulture))
+        {
+            var user = new IdentityUser(UserCreationData.Username);
+            var result = await UserManager.CreateAsync(user, UserCreationData.Password);
+
+            if (result.Succeeded)
+            {
+                var role = UserCreationData.IsAdmin ? Roles.Admin : Roles.User;
+                _ = await UserManager.AddToRoleAsync(user, role);
+
+                // Clear the form
+                UserCreationData.Username = null;
+                UserCreationData.Password = null;
+                UserCreationData.PasswordRepeat = null;
+                UserCreationData.IsAdmin = false;
+            }
+            else if (result.IsDuplicateUsername())
+            {
+                UserCreationUserExists = true;
+            }
+            else if (result.IsPasswordPolicyViolation())
+            {
+                UserCreationPasswordPolicyViolation = true;
+            }
+            else
+            {
+                UserCreationGenericError = true;
+            }
+        }
+        else
+        {
+            UserCreationPasswordMismatch = true;
+        }
+
+        StateHasChanged();
+    }
+
+
+    class AdminPasswordChangeModel
+    {
+        [Required]
+        public string? NewPassword { get; set; }
+
+        [Required]
+        public string? NewPasswordRepeat { get; set; }
+    }
+
+    readonly AdminPasswordChangeModel AdminPasswordChangeData = new AdminPasswordChangeModel();
+
+    bool _isPasswordPasswordChangeDialogOpen;
+    bool IsPasswordChangeDialogOpen
+    {
+        get => _isPasswordPasswordChangeDialogOpen;
+        set
+        {
+            _isPasswordPasswordChangeDialogOpen = value;
+
+            // Reset form and error messages when dialog is closed
+            if (!value)
+            {
+                AdminPasswordChangeData.NewPassword = null;
+                AdminPasswordChangeData.NewPasswordRepeat = null;
+
+                AdminPasswordChangeGenericError = false;
+                AdminPasswordChangePasswordMismatch = false;
+                AdminPasswordChangePasswordPolicyViolation = false;
+
+                StateHasChanged();
+            }
+        }
+    }
+
+    IdentityUser? PasswordChangeTargetUser { get; set; }
+
+    bool AdminPasswordChangeGenericError { get; set; }
+
+    bool AdminPasswordChangePasswordMismatch { get; set; }
+
+    bool AdminPasswordChangePasswordPolicyViolation { get; set; }
+
+    void OpenChangePasswordDialog(IdentityUser user)
+    {
+        PasswordChangeTargetUser = user;
+        IsPasswordChangeDialogOpen = true;
+
+        StateHasChanged();
+    }
+
+    async Task AdminChangePasswordAsync()
+    {
+        AdminPasswordChangeGenericError = false;
+        AdminPasswordChangePasswordMismatch = false;
+        AdminPasswordChangePasswordPolicyViolation = false;
+        StateHasChanged();
+
+        if (PasswordChangeTargetUser is null)
+        {
+            // Shouldn't happen
+            IsPasswordChangeDialogOpen = false;
+        }
+        else
+        {
+            if (string.Equals(AdminPasswordChangeData.NewPassword, AdminPasswordChangeData.NewPasswordRepeat, StringComparison.InvariantCulture))
+            {
+                var token = await UserManager.GeneratePasswordResetTokenAsync(PasswordChangeTargetUser);
+                var result = await UserManager.ResetPasswordAsync(PasswordChangeTargetUser, token, AdminPasswordChangeData.NewPassword);
+
+                if (result.Succeeded)
+                {
+                    IsPasswordChangeDialogOpen = false;
+                }
+                else if (result.IsPasswordPolicyViolation())
+                {
+                    AdminPasswordChangePasswordPolicyViolation = true;
+                }
+                else
+                {
+                    AdminPasswordChangeGenericError = true;
+                }
+            }
+            else
+            {
+                AdminPasswordChangePasswordMismatch = true;
+            }
+        }
+
+        StateHasChanged();
+    }
+
+
+    async Task DeleteUserAsync(IdentityUser user)
+    {
+        var result = await UserManager.DeleteAsync(user);
+
+        if (result.Succeeded)
+        {
+            StateHasChanged();
+        }
+        else
+        {
+            // ToDo
+        }
+    }
+}
